@@ -1,34 +1,40 @@
-# Taylor’s Pantry(https://whynotshrutz-taylors-xmxh.bolt.host/)
+# 🧑‍🍳 Taylor’s Pantry
 
-A small, fast React + Vite + TypeScript app that finds recipes from TheMealDB based on ingredients or dish names.  
-Designed as a minimal “what’s in my pantry” helper for busy evenings.
-
-
----
-
-## Features
-
-- Search by ingredient(s) (supports multi-ingredient intersection: `chicken rice`)
-- Search by dish name (e.g., `biryani`, `lasagna`) — falls back to name search if ingredients return no results
-- Chef’s Choice: random recipe (opens modal with full details)
-- Fav/Unfav recipes stored in `localStorage`
-- Recent searches (local history chips)
-- Responsive layout (Tailwind CSS)
-- Accessible basics: aria labels, modal, `aria-live` status regions
+**Taylor’s Pantry** helps you find delicious recipes based on what’s in your kitchen — or even your mood.  
+Whether you’re craving comfort food, looking for something healthy, or just feeling lucky, Taylor’s Pantry has a dish for every moment 🍲
 
 ---
 
-## Tech Stack
-
-- React + TypeScript (Vite)
-- Tailwind CSS
-- TheMealDB public API (no auth)
-- LocalStorage for favorites & history
+## 🚀 Live Demo  
+👉 [Try Taylor’s Pantry here](https://whynotshrutz-taylors-xmxh.bolt.host)
 
 ---
 
-## Local Development
+## 🌟 Features
+- 🔍 **Search recipes** by ingredient or dish name  
+- 🎭 **Mood-based picks** (Healthy, Comfort, Spicy, Sweet, etc.)  
+- 🍜 **Quick Picks** with random themed suggestions (One-pot, High-protein, etc.)  
+- 🎲 **Chef’s Choice** – get a random recipe instantly  
+- ❤️ **Save favorites** using LocalStorage (persisted across visits)  
+- 🕒 **Recent search history** with one-click reuse  
+- 🍽️ **Random starter recipes** shown on first visit  
+- ✖ **Clear search** button and smooth autocomplete prevention  
+- 📱 **Responsive UI** (works on mobile and desktop)
 
+---
+
+## 🧰 Tech Stack
+- **React + TypeScript** (built with Vite)  
+- **Tailwind CSS** for styling  
+- **TheMealDB API** for recipes  
+- **LocalStorage** for favorites and history persistence  
+
+---
+
+## ⚙️ Run Locally
+
+1. **Clone this repo**
+   
 ```bash
 # clone
 git clone https://github.com/<your-username>/taylors-pantry.git

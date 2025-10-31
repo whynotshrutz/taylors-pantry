@@ -6,22 +6,60 @@ import MealModal from "./components/MealModal";
 
 // Quick Picks and Moods
 const QUICK_PICKS = [
-  { label: "One-pot", query: "stew" },
-  { label: "Under 20 min", query: "salad" },
-  { label: "High-protein", query: "chicken" },
-  { label: "Vegetarian", query: "paneer" },
-  { label: "Comfort bowls", query: "curry" },
-  { label: "Noodles/Pasta", query: "noodle" },
+  {
+    label: "One-pot",
+    queries: ["stew", "soup", "chili", "casserole"],
+  },
+  {
+    label: "Under 20 min",
+    queries: ["salad", "sandwich", "toast", "omelet"],
+  },
+  {
+    label: "High-protein",
+    queries: ["chicken", "egg", "lentil", "fish"],
+  },
+  {
+    label: "Vegetarian",
+    queries: ["paneer", "tofu", "vegetable", "spinach"],
+  },
+  {
+    label: "Comfort bowls",
+    queries: ["curry", "pasta", "ramen", "stew"],
+  },
+  {
+    label: "Noodles/Pasta",
+    queries: ["noodle", "spaghetti", "macaroni", "lasagna"],
+  },
 ];
 
+
 const MOODS = [
-  { label: "Comfort", query: "curry" },
-  { label: "Quick Bite", query: "salad" },
-  { label: "Healthy", query: "grilled" },
-  { label: "Indulgent", query: "cheese" },
-  { label: "Spicy", query: "chili" },
-  { label: "Sweet", query: "dessert" },
+  {
+    label: "Comfort",
+    queries: ["curry", "pasta", "stew", "soup"],
+  },
+  {
+    label: "Quick Bite",
+    queries: ["sandwich", "wrap", "salad"],
+  },
+  {
+    label: "Healthy",
+    queries: ["grilled", "salad", "vegetable", "chicken"],
+  },
+  {
+    label: "Indulgent",
+    queries: ["cheese", "chocolate", "butter"],
+  },
+  {
+    label: "Spicy",
+    queries: ["chili", "pepper", "curry"],
+  },
+  {
+    label: "Sweet",
+    queries: [ "cake", "pudding"],
+  },
 ];
+
 
 // Fetch one random meal (Chef’s Choice)
 async function openChefsChoice(setOpenId: (id: string) => void) {
@@ -125,9 +163,16 @@ export default function App() {
 
   const showInitialRandom = !hasVisited && initialRandomMeals.length > 0;
 
-  function applyMood(query: string) {
-    setIngredient(query);
-  }
+function applyMood(mood: { label: string; queries: string[] }) {
+  const randomQuery =
+    mood.queries[Math.floor(Math.random() * mood.queries.length)];
+  setIngredient(randomQuery);
+}
+function applyQuickPick(pick: { label: string; queries: string[] }) {
+  const randomQuery =
+    pick.queries[Math.floor(Math.random() * pick.queries.length)];
+  setIngredient(randomQuery);
+}
 
   // -------- Welcome Screen --------
   if (!started) {
@@ -230,20 +275,22 @@ export default function App() {
 
           {/* Mood chips */}
           <div className="mt-3 flex flex-wrap gap-2">
-            {MOODS.map((m) => (
-              <button key={m.label} className="chip" onClick={() => applyMood(m.query)}>
-                {m.label}
-              </button>
+           {MOODS.map((m) => (
+           <button key={m.label} className="chip" onClick={() => applyMood(m)}>
+            {m.label}
+            </button>
             ))}
+
           </div>
 
           {/* Quick Picks */}
           <div className="mt-3 flex flex-wrap gap-2">
             {QUICK_PICKS.map((q) => (
-              <button key={q.label} className="chip" onClick={() => setIngredient(q.query)}>
+              <button key={q.label} className="chip" onClick={() => applyQuickPick(q)}>
                 {q.label}
-              </button>
-            ))}
+                </button>
+             ))}
+
           </div>
 
           {/* History */}
