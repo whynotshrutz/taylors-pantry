@@ -1,4 +1,4 @@
-# Taylor’s Pantry
+# Taylor’s Pantry(https://whynotshrutz-taylors-xmxh.bolt.host/)
 
 A small, fast React + Vite + TypeScript app that finds recipes from TheMealDB based on ingredients or dish names.  
 Designed as a minimal “what’s in my pantry” helper for busy evenings.
