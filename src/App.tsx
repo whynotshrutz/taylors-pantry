@@ -4,8 +4,8 @@ import { useLocalStorage } from "./hooks/useLocalStorage";
 import MealCard from "./components/MealCard";
 import MealModal from "./components/MealModal";
 
-/* ---------- quick picks ---------- */
-const QUICK_PICKS: { label: string; query: string }[] = [
+// Quick Picks and Moods
+const QUICK_PICKS = [
   { label: "One-pot", query: "stew" },
   { label: "Under 20 min", query: "salad" },
   { label: "High-protein", query: "chicken" },
@@ -14,55 +14,52 @@ const QUICK_PICKS: { label: string; query: string }[] = [
   { label: "Noodles/Pasta", query: "noodle" },
 ];
 
-async function openChefsChoice(setOpenId: (id: string) => void) {
-  const r = await fetch("https://www.themealdb.com/api/json/v1/1/random.php");
-  const j = await r.json();
-  const id = j?.meals?.[0]?.idMeal as string | undefined;
-  if (id) setOpenId(id);
-}
-
-/* ---------- mood map (simple) ---------- */
-/* You can expand these to multi-word queries or pairings later */
-const MOODS: { label: string; query: string }[] = [
+const MOODS = [
   { label: "Comfort", query: "curry" },
   { label: "Quick Bite", query: "salad" },
   { label: "Healthy", query: "grilled" },
   { label: "Indulgent", query: "cheese" },
-  { label: "Spicy", query: "curry" },
+  { label: "Spicy", query: "chili" },
   { label: "Sweet", query: "dessert" },
 ];
+
+// Fetch one random meal (Chef’s Choice)
+async function openChefsChoice(setOpenId: (id: string) => void) {
+  const r = await fetch("https://www.themealdb.com/api/json/v1/1/random.php");
+  const j = await r.json();
+  const id = j?.meals?.[0]?.idMeal;
+  if (id) setOpenId(id);
+}
 
 type FavoriteMap = Record<string, true>;
 
 export default function App() {
-  // onboarding / first-run
-  const [hasVisited, setHasVisited] = useLocalStorage<boolean>("tp.hasVisited", false);
+  // Welcome screen toggle
+  const [started, setStarted] = useState(false);
 
-  // persisted app state
+  // Persisted states
+  const [hasVisited, setHasVisited] = useLocalStorage<boolean>("tp.hasVisited", false);
   const [ingredient, setIngredient] = useLocalStorage<string>("tp.lastIngredient", "");
   const [favorites, setFavorites] = useLocalStorage<FavoriteMap>("tp.favorites", {});
   const [history, setHistory] = useLocalStorage<string[]>("tp.history", []);
 
-  // hook-based data
-  const { data, loading, error, mode } = useMealsByIngredient(ingredient);
-
-  // modal + UI
+  // Meal data
+  const { data, loading, error } = useMealsByIngredient(ingredient);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  // *initialRandomMeals* shown only on first visit
+  // Random recipes (first visit)
   const [initialRandomMeals, setInitialRandomMeals] = useState<any[]>([]);
   const [fetchingRandom, setFetchingRandom] = useState(false);
 
-  // fetch favorites list derived from known meals if needed
-  const meals = useMemo(() => data ?? [], [data]);
+  // Generate a random unique input name to stop autocomplete
+  function useRandomInputName() {
+    const [n] = useState(() => `q_${Math.random().toString(36).slice(2)}`);
+    return n;
+  }
+  const randomName = useRandomInputName();
 
-  const favMeals = useMemo(
-    () => (meals ? meals.filter((m) => favorites[m.idMeal]) : []),
-    [meals, favorites]
-  );
-
+  // Update search history
   useEffect(() => {
-    // update history when a new search completes
     if (!ingredient || loading) return;
     setHistory((prev) => {
       const next = [ingredient, ...prev.filter((x) => x !== ingredient)];
@@ -70,6 +67,19 @@ export default function App() {
     });
   }, [ingredient, loading, setHistory]);
 
+  const meals = useMemo(() => data ?? [], [data]);
+  const favMeals = useMemo(() => meals.filter((m) => favorites[m.idMeal]), [meals, favorites]);
+
+  // Escape key closes modal
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenId(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Favorites toggle
   const toggleFav = (id: string) => {
     setFavorites((prev) => {
       const copy = { ...prev };
@@ -79,7 +89,7 @@ export default function App() {
     });
   };
 
-  /* ---------- first run: fetch multiple random meals ---------- */
+  // Fetch random recipes for first visit only
   async function fetchRandomMeals(count = 6) {
     setFetchingRandom(true);
     try {
@@ -105,32 +115,46 @@ export default function App() {
   }
 
   useEffect(() => {
-    // On first load, if user hasn't visited before, fetch random recipes
+    if (!started) return;
     if (!hasVisited) {
-      fetchRandomMeals(6).then(() => {
-        // mark visited so we don't fetch random again on subsequent loads
-        setHasVisited(true);
-      });
+      fetchRandomMeals(6).then(() => setHasVisited(true));
     } else {
-      // clear initialRandomMeals if it's a repeat visit
       setInitialRandomMeals([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
+  }, [started]);
 
-  /* ---------- mood handler ---------- */
-  function applyMood(moodQuery: string) {
-    // set ingredient to mood query and trigger hook (debounced inside hook)
-    setIngredient(moodQuery);
+  const showInitialRandom = !hasVisited && initialRandomMeals.length > 0;
+
+  function applyMood(query: string) {
+    setIngredient(query);
   }
 
-  /* ---------- UI helpers ---------- */
-  const showInitialRandom = !hasVisited && initialRandomMeals.length > 0;
-  // note: after first render, hasVisited is set true (so next load shows favorites)
+  // -------- Welcome Screen --------
+  if (!started) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-100 to-blue-50">
+        <div className="text-center max-w-md p-6 bg-white rounded-3xl shadow-lg border">
+          <h1 className="text-3xl font-bold mb-2">Welcome to Taylor’s Pantry 👋</h1>
+          <p className="text-gray-600 mb-6">
+            Hungry? Let’s find something delicious you can cook right now.
+          </p>
+          <button
+            onClick={() => setStarted(true)}
+            className="rounded-xl px-6 py-3 text-lg font-medium bg-sky-500 hover:bg-sky-600 text-white shadow transition"
+          >
+            Let’s Get Started 🍳
+          </button>
+          <p className="text-xs text-gray-400 mt-6">
+            You can search by any ingredient or dish name once inside.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
+  // -------- Pantry UI --------
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="border-b bg-white/70 backdrop-blur">
         <div className="container-app py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -145,7 +169,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Intro / search card */}
       <section className="container-app mt-6">
         <div className="card p-5 sm:p-7">
           <div className="sm:flex sm:items-end sm:justify-between gap-4">
@@ -154,10 +177,9 @@ export default function App() {
                 What’s in the fridge tonight?
               </h2>
               <p className="text-gray-600 mt-1">
-                Type ingredient(s) (space/comma separated) or a dish name. Try mood chips if you want inspiration.
+                Type ingredients or try a mood — results appear instantly.
               </p>
             </div>
-
             <button
               className="mt-3 sm:mt-0 inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium bg-sky-500 text-white border-sky-600 hover:bg-sky-600"
               onClick={() => openChefsChoice((id) => setOpenId(id))}
@@ -166,70 +188,73 @@ export default function App() {
             </button>
           </div>
 
-          {/* input */}
-          <div className="mt-4 flex gap-2">
+          {/* Disable all autocomplete behavior */}
+          <form
+            autoComplete="off"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (ingredient.trim()) setIngredient(ingredient.trim());
+            }}
+            className="mt-4 flex gap-2"
+          >
             <div className="relative flex-1">
               <span className="pointer-events-none absolute left-3 top-2.5 text-gray-400">🔎</span>
               <input
-                type="text"
-                className="input pl-9"
+                type="search"
+                className="input pl-9 pr-10"
                 placeholder='Try "chicken", "paneer", "rice" or "biryani"'
                 value={ingredient}
                 onChange={(e) => setIngredient(e.target.value)}
-                aria-label="Ingredient or dish input"
+                onFocus={(e) =>
+                  ((e.target as HTMLInputElement).name = `q_${Math.random().toString(36).slice(2)}`)
+                }
+                aria-label="Ingredient input"
+                name={randomName}
                 autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
                 spellCheck={false}
-                name="pantry_q"
+                inputMode="search"
               />
+              {ingredient && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  className="absolute right-2 top-2 h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                  onClick={() => setIngredient("")}
+                >
+                  ✖
+                </button>
+              )}
             </div>
-            <button
-              className="btn-primary"
-              onClick={() => { if (ingredient.trim()) setIngredient(ingredient.trim()); }}
-            >
-              Search
-            </button>
-          </div>
+            <button className="btn-primary">Search</button>
+          </form>
 
           {/* Mood chips */}
           <div className="mt-3 flex flex-wrap gap-2">
             {MOODS.map((m) => (
-              <button
-                key={m.label}
-                className="chip"
-                onClick={() => applyMood(m.query)}
-                aria-label={`Mood ${m.label}`}
-                title={m.label}
-              >
+              <button key={m.label} className="chip" onClick={() => applyMood(m.query)}>
                 {m.label}
               </button>
             ))}
           </div>
 
-          {/* Quick picks */}
+          {/* Quick Picks */}
           <div className="mt-3 flex flex-wrap gap-2">
             {QUICK_PICKS.map((q) => (
-              <button
-                key={q.label}
-                className="chip"
-                onClick={() => setIngredient(q.query)}
-                aria-label={`Use ${q.label}`}
-              >
+              <button key={q.label} className="chip" onClick={() => setIngredient(q.query)}>
                 {q.label}
               </button>
             ))}
           </div>
 
-          {/* Recent searches */}
+          {/* History */}
           {history.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {history.map((h) => (
-                <button key={h} className="chip" onClick={() => setIngredient(h)} aria-label={`Use ${h}`}>
+                <button key={h} className="chip" onClick={() => setIngredient(h)}>
                   {h}
                 </button>
               ))}
-              <button className="chip-muted" onClick={() => setHistory([])} aria-label="Clear history">
+              <button className="chip-muted" onClick={() => setHistory([])}>
                 Clear
               </button>
             </div>
@@ -237,10 +262,12 @@ export default function App() {
         </div>
       </section>
 
-      {/* IF first-time show random picks */}
+      {/* Show random recipes on first visit */}
       {showInitialRandom && (
         <section className="container-app mt-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Welcome! Here are some recipes to get started</h3>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Welcome! Here are some random recipes to get started
+          </h3>
           {fetchingRandom ? (
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -269,103 +296,31 @@ export default function App() {
         </section>
       )}
 
-      {/* If not first-run: Favorites (already from your logic) */}
-      {!showInitialRandom && Object.keys(favorites).length > 0 && (
-        <section className="container-app mt-6">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-700">Favorites</h3>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {/* favorites: for simplicity show favorite items by fetching their ids via MealDB if needed.
-                Here we show favorites only when they overlap with current 'meals' or initialRandomMeals.
-                For a full solution you could fetch details for each favorite id on mount */}
-            {Object.keys(favorites).slice(0, 8).map((id) => (
-              // Attempt to find title & thumb from current sets first
-              (() => {
-                const found =
-                  (meals ?? []).find((x: any) => x.idMeal === id) ||
-                  initialRandomMeals.find((x: any) => x.idMeal === id);
-                if (found) {
-                  return (
-                    <MealCard
-                      key={id}
-                      idMeal={id}
-                      title={found.strMeal}
-                      src={found.strMealThumb}
-                      isFav
-                      onToggleFav={toggleFav}
-                      onClick={setOpenId}
-                    />
-                  );
-                }
-                // fallback: render a minimal placeholder and load detail on click (open modal by id)
-                return (
-                  <div key={id} className="card p-3">
-                    <div className="font-medium">Saved recipe</div>
-                    <div className="text-xs text-gray-500 mt-1">Click to open</div>
-                    <div className="mt-3">
-                      <button
-                        className="btn-ghost"
-                        onClick={() => setOpenId(id)}
-                      >
-                        Open
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Results (normal search results or fallback messages) */}
+      {/* Search results */}
       <section className="container-app mt-6 pb-16" aria-live="polite">
-        {loading && (
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="card overflow-hidden animate-pulse">
-                <div className="h-44 bg-gray-200" />
-                <div className="p-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="mt-2 h-3 bg-gray-200 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {loading && <div className="text-center text-gray-500">Loading recipes...</div>}
+        {error && <div className="text-red-600">Error: {error}</div>}
 
-        {error && (
-          <div className="card p-4 border-red-200 bg-red-50 text-red-700">Network issue: {error}</div>
-        )}
-
-        {/* If the user has typed a query and there are no results */}
         {!loading && !error && ingredient && meals.length === 0 && (
           <div className="card p-6 text-gray-700">
-            <div className="text-lg font-medium">No results for “{ingredient}”.</div>
+            <div className="text-lg font-medium">
+              No results for “{ingredient}”.
+            </div>
             <div className="text-sm text-gray-500 mt-1">
-              Try a single ingredient, different spelling, or a dish name.
+              Try one of these popular searches:
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {["chicken", "rice", "paneer", "egg"].map((s) => (
+                <button key={s} className="chip" onClick={() => setIngredient(s)}>
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* show note when search returned dish-name matches */}
-        {!loading && !error && ingredient && mode === "name" && (data?.length ?? 0) > 0 && (
-          <div className="mt-2 text-xs text-gray-500">
-            Showing dish name matches for “{ingredient}”. Try “chicken rice” to filter by ingredients.
-          </div>
-        )}
-
-        {/* empty prompt when no ingredient typed and not first-run */}
-        {!ingredient && !showInitialRandom && Object.keys(favorites).length === 0 && (
-          <div className="card p-6 text-gray-600">
-            Start by typing an ingredient or a dish—Taylor just walked in with something from the fridge.
-          </div>
-        )}
-
-        {/* normal results grid */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mt-4">
-          {meals.map((m: any) => (
+          {meals.map((m) => (
             <MealCard
               key={m.idMeal}
               idMeal={m.idMeal}
@@ -379,10 +334,11 @@ export default function App() {
         </div>
       </section>
 
-      {/* Modal */}
       <MealModal id={openId} onClose={() => setOpenId(null)} />
 
-      <footer className="py-10 text-center text-xs text-gray-400">Bon appétit, Taylor 🍳</footer>
+      <footer className="py-10 text-center text-xs text-gray-400">
+        Bon appétit, Taylor 🍳
+      </footer>
     </div>
   );
 }
