@@ -6,7 +6,7 @@ Whether you’re craving comfort food, looking for something healthy, or just fe
 ---
 
 ## 🚀 Live Demo  
-👉 [Try Taylor’s Pantry here](https://whynotshrutz-taylors-xmxh.bolt.host)
+👉 [Try Taylor’s Pantry here](https://whynotshrutz-taylors-nkse.bolt.host)
 
 ---
 
